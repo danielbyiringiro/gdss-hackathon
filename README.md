@@ -73,19 +73,12 @@ pip install -r requirements.txt
 
 ### Provide an API key
 
-The API key needed to reproduce this submission is included in **`secret.txt`** (provided
-intentionally so judges can run the project). Just copy it into `.env`:
+The API key needed to reproduce this submission was included in the google form submission.
 
 ```bash
-cp secret.txt .env            # contains the OPENAI_API_KEY for reproduction
-# or supply your own:
 cp .env.example .env && export OPENAI_API_KEY="sk-..."
 ```
 
-> **Reviewers:** `secret.txt` holds a working `OPENAI_API_KEY`; copy it to `.env` (the app
-> auto-loads `.env`). Without a key the server still runs and the UI loads, but the cloud
-> backends return a clear 503 and you can switch to the free `ollama` backend instead.
->
 > **Cost to reproduce** (montage mode, ~40 API calls over 169 images): **gpt-4o ≈ $0.25–0.35**,
 > gpt-4o-mini ≈ $0.03, claude-sonnet ≈ $0.20–0.30, ollama = free.
 
