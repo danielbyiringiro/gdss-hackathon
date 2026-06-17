@@ -1,0 +1,17 @@
+# secrets
+.env
+
+# python
+__pycache__/
+*.pyc
+
+# video build intermediates / previews
+docs/_build/
+docs/slides_preview/
+docs/*_preview.png
+
+# progress sidecar from run_extraction --resume
+*.xlsx.done.json
+
+# scratch outputs (regenerate with run_extraction.py)
+output_llava.xlsx

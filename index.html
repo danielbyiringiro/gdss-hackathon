@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Image &rarr; IMDB · Product Attribute Extractor</title>
+        <style>
+            :root {
+                --bg: #0f1220;
+                --card: #1a1f35;
+                --ink: #e8ecf6;
+                --mut: #9aa3c0;
+                --acc: #6c8cff;
+                --ok: #46d39a;
+                --line: #2b3252;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                font-family:
+                    system-ui,
+                    -apple-system,
+                    Segoe UI,
+                    Roboto,
+                    sans-serif;
+                background: var(--bg);
+                color: var(--ink);
+            }
+            header {
+                padding: 24px 28px;
+                border-bottom: 1px solid var(--line);
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                flex-wrap: wrap;
+            }
+            header h1 {
+                font-size: 19px;
+                margin: 0;
+            }
+            header .sub {
+                color: var(--mut);
+                font-size: 13px;
+            }
+            .wrap {
+                max-width: 1080px;
+                margin: 0 auto;
+                padding: 24px 28px;
+            }
+            .card {
+                background: var(--card);
+                border: 1px solid var(--line);
+                border-radius: 14px;
+                padding: 20px;
+                margin-bottom: 20px;
+            }
+            .row {
+                display: flex;
+                gap: 18px;
+                flex-wrap: wrap;
+                align-items: center;
+            }
+            label.field {
+                font-size: 13px;
+                color: var(--mut);
+                display: block;
+                margin-bottom: 6px;
+            }
+            select,
+            button {
+                font: inherit;
+                border-radius: 9px;
+                border: 1px solid var(--line);
+                background: #11162b;
+                color: var(--ink);
+                padding: 10px 14px;
+            }
+            button.primary {
+                background: var(--acc);
+                border-color: var(--acc);
+                color: #0b0f1f;
+                font-weight: 600;
+                cursor: pointer;
+            }
+            button.primary:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+            button.ghost {
+                cursor: pointer;
+            }
+            .drop {
+                border: 2px dashed var(--line);
+                border-radius: 12px;
+                padding: 34px;
+                text-align: center;
+                color: var(--mut);
+                cursor: pointer;
+                transition: 0.15s;
+            }
+            .drop:hover,
+            .drop.over {
+                border-color: var(--acc);
+                color: var(--ink);
+            }
+            .thumbs {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                margin-top: 14px;
+            }
+            .thumbs img {
+                width: 74px;
+                height: 74px;
+                object-fit: cover;
+                border-radius: 8px;
+                border: 1px solid var(--line);
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 14px;
+            }
+            th,
+            td {
+                text-align: left;
+                padding: 9px 10px;
+                border-bottom: 1px solid var(--line);
+                vertical-align: top;
+            }
+            th {
+                color: var(--mut);
+                font-weight: 500;
+                width: 190px;
+            }
+            td .val {
+                font-weight: 600;
+            }
+            .pill {
+                font-size: 12px;
+                padding: 3px 9px;
+                border-radius: 999px;
+                background: #11162b;
+                border: 1px solid var(--line);
+                color: var(--mut);
+            }
+            .pill.ok {
+                color: var(--ok);
+                border-color: var(--ok);
+            }
+            .muted {
+                color: var(--mut);
+            }
+            .spinner {
+                width: 16px;
+                height: 16px;
+                border: 2px solid #ffffff44;
+                border-top-color: #0b0f1f;
+                border-radius: 50%;
+                display: inline-block;
+                animation: spin 0.7s linear infinite;
+                vertical-align: -3px;
+                margin-right: 8px;
+            }
+            @keyframes spin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+            a.dl {
+                color: var(--acc);
+                text-decoration: none;
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <h1>🛒 Image&nbsp;→&nbsp;IMDB</h1>
+            <span class="sub"
+                >Product packaging photos → structured Item Master Database
+                row</span
+            >
+            <span style="flex: 1"></span>
+            <span id="health" class="pill">checking…</span>
+        </header>
+
+        <div class="wrap">
+            <div class="card">
+                <div class="row" style="margin-bottom: 16px">
+                    <div>
+                        <label class="field" for="backend"
+                            >Vision backend</label
+                        >
+                        <select id="backend">
+                            <option value="openai">
+                                OpenAI GPT-4o vision
+                            </option>
+                            <option value="claude">
+                                Claude vision
+                            </option>
+                            <option value="ollama">
+                                Ollama / LLaVA (local)
+                            </option>
+                        </select>
+                    </div>
+                    <div style="flex: 1"></div>
+                    <div style="align-self: flex-end">
+                        <a class="dl" href="/download" target="_blank"
+                            >⬇ Download full output_results.xlsx</a
+                        >
+                    </div>
+                </div>
+
+                <div id="drop" class="drop">
+                    <strong>Drop product images here</strong> or click to
+                    choose<br />
+                    <span class="muted"
+                        >Upload all photos of ONE product (front, back, sides,
+                        barcode). They are merged into one row.</span
+                    >
+                    <input
+                        id="file"
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        hidden
+                    />
+                </div>
+                <div id="thumbs" class="thumbs"></div>
+
+                <div class="row" style="margin-top: 16px">
+                    <button id="go" class="primary" disabled>
+                        Extract attributes
+                    </button>
+                    <button id="clear" class="ghost">Clear</button>
+                    <span id="status" class="muted"></span>
+                </div>
+            </div>
+
+            <div id="resultCard" class="card" style="display: none">
+                <div
+                    class="row"
+                    style="justify-content: space-between; margin-bottom: 10px"
+                >
+                    <h3 style="margin: 0">Extracted product</h3>
+                    <span id="meta" class="pill ok"></span>
+                </div>
+                <table id="result"></table>
+            </div>
+        </div>
+
+        <script>
+            const FIELDS = [
+                "ITEM_NAME",
+                "BARCODE",
+                "MANUFACTURER",
+                "BRAND",
+                "WEIGHT",
+                "PACKAGING_TYPE",
+                "COUNTRY",
+                "VARIANT",
+                "TYPE",
+                "FRAGRANCE_FLAVOR",
+                "PROMOTION",
+                "ADDONS",
+                "TAGLINE",
+            ];
+            let files = [];
+            const $ = (s) => document.querySelector(s);
+            const drop = $("#drop"),
+                fileInput = $("#file"),
+                thumbs = $("#thumbs"),
+                go = $("#go");
+
+            fetch("/health")
+                .then((r) => r.json())
+                .then((h) => {
+                    const oa = h.openai_key_set
+                        ? `OpenAI ✓ (${h.openai_model})`
+                        : "OpenAI ✗";
+                    const cl = h.claude_key_set ? "Claude ✓" : "Claude ✗";
+                    $("#health").textContent =
+                        `${oa} · ${cl} · Ollama: ${h.ollama}`;
+                    $("#backend").value = h.default_backend;
+                })
+                .catch(() => ($("#health").textContent = "server offline"));
+
+            drop.onclick = () => fileInput.click();
+            drop.ondragover = (e) => {
+                e.preventDefault();
+                drop.classList.add("over");
+            };
+            drop.ondragleave = () => drop.classList.remove("over");
+            drop.ondrop = (e) => {
+                e.preventDefault();
+                drop.classList.remove("over");
+                addFiles(e.dataTransfer.files);
+            };
+            fileInput.onchange = (e) => addFiles(e.target.files);
+            $("#clear").onclick = () => {
+                files = [];
+                render();
+                $("#resultCard").style.display = "none";
+                $("#status").textContent = "";
+            };
+
+            function addFiles(list) {
+                for (const f of list)
+                    if (f.type.startsWith("image/")) files.push(f);
+                render();
+            }
+            function render() {
+                thumbs.innerHTML = "";
+                files.forEach((f) => {
+                    const img = document.createElement("img");
+                    img.src = URL.createObjectURL(f);
+                    thumbs.appendChild(img);
+                });
+                go.disabled = files.length === 0;
+            }
+
+            go.onclick = async () => {
+                go.disabled = true;
+                $("#status").innerHTML =
+                    '<span class="spinner"></span>Reading ' +
+                    files.length +
+                    " image(s)…";
+                const fd = new FormData();
+                files.forEach((f) => fd.append("images", f));
+                fd.append("backend", $("#backend").value);
+                try {
+                    const r = await fetch("/extract", {
+                        method: "POST",
+                        body: fd,
+                    });
+                    if (!r.ok)
+                        throw new Error(
+                            (await r.json()).detail || r.statusText,
+                        );
+                    const d = await r.json();
+                    showResult(d);
+                    $("#status").textContent =
+                        "Saved to spreadsheet row " + d.xlsx_row + ".";
+                } catch (e) {
+                    $("#status").textContent = "Error: " + e.message;
+                }
+                go.disabled = false;
+            };
+
+            function showResult(d) {
+                $("#resultCard").style.display = "block";
+                $("#meta").textContent =
+                    d.backend +
+                    " · " +
+                    d.model +
+                    " · " +
+                    d.images_processed +
+                    " img";
+                const t = $("#result");
+                t.innerHTML = "";
+                FIELDS.forEach((f) => {
+                    const v = d.product[f] || "";
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `<th>${f}</th><td>${v ? '<span class="val">' + esc(v) + "</span>" : '<span class="muted">—</span>'}</td>`;
+                    t.appendChild(tr);
+                });
+            }
+            function esc(s) {
+                return s.replace(
+                    /[&<>]/g,
+                    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c],
+                );
+            }
+        </script>
+    </body>
+</html>
