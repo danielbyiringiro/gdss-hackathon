@@ -59,8 +59,9 @@ data, not vision failures.
 > with an Anthropic key. Both use the identical pipeline, prompt and grouping.
 
 Artifacts: `output_results_openai.xlsx` (GPT-4o-mini, reproducible), `output_results_claude.xlsx`
-(Claude), `output_results.xlsx` (LLaVA), and per-field diff reports `report_openai.xlsx` /
-`report_claude.xlsx` / `report_llava.xlsx`.
+(Claude), `output_results_llava.xlsx` (LLaVA baseline), and per-field diff reports
+`report_openai.xlsx` / `report_claude.xlsx` / `report_llava.xlsx`. `output_results.xlsx` is the
+**live working sheet** the UI/CLI writes to — it ships empty (header only) so a fresh run fills it.
 
 ---
 
@@ -72,15 +73,18 @@ pip install -r requirements.txt
 
 ### Provide an API key
 
+The API key needed to reproduce this submission is included in **`secret.txt`** (provided
+intentionally so judges can run the project). Just copy it into `.env`:
+
 ```bash
-cp .env.example .env          # then edit .env and paste your real key
-export OPENAI_API_KEY="sk-..."            # or ANTHROPIC_API_KEY="sk-ant-..."
+cp secret.txt .env            # contains the OPENAI_API_KEY for reproduction
+# or supply your own:
+cp .env.example .env && export OPENAI_API_KEY="sk-..."
 ```
 
-> **For reviewers reproducing this submission:** paste a valid OpenAI key into `.env`
-> (or export `OPENAI_API_KEY`). No key is committed to the repo. Without a key the server
-> still runs and the UI loads, but the cloud backends return a clear 503 and you can switch
-> to the free `ollama` backend instead.
+> **Reviewers:** `secret.txt` holds a working `OPENAI_API_KEY`; copy it to `.env` (the app
+> auto-loads `.env`). Without a key the server still runs and the UI loads, but the cloud
+> backends return a clear 503 and you can switch to the free `ollama` backend instead.
 >
 > **Cost to reproduce** (montage mode, ~40 API calls over 169 images): **gpt-4o ≈ $0.25–0.35**,
 > gpt-4o-mini ≈ $0.03, claude-sonnet ≈ $0.20–0.30, ollama = free.
@@ -160,14 +164,16 @@ grouping.py                  Programmatic image grouping + montage building (no 
 run_extraction.py            Headless batch reproducer (group → extract → xlsx → score)
 evaluate_results.py          Accuracy scorer (8 strategies, best-match row alignment)
 reference.xlsx               Ground-truth Item Master Database
-output_results_openai.xlsx   GPT-4o results               (written by your run)
+output_results_openai.xlsx   GPT-4o-mini results          (reproducible)
 output_results_claude.xlsx   Claude-vision results
-output_results.xlsx          LLaVA results                (baseline)
+output_results_llava.xlsx    LLaVA results                (baseline)
+output_results.xlsx          live working sheet           (ships empty, filled by a run)
 report_claude.xlsx           Per-field diff vs reference (Claude)
 report_llava.xlsx            Per-field diff vs reference (LLaVA)
 claude_vision_extractions.json   raw Claude extractions (auditable)
 images/                      product photos (169)
-docs/                        demo video + narrated-slide generator
+docs/demo_video.mp4          submission video (live UI walkthrough + narrated summary)
+secret.txt                   OPENAI_API_KEY for reproduction (copy to .env)
 requirements.txt
 .env.example
 ```
@@ -182,25 +188,13 @@ plus an overall summary, and lists unmatched rows.
 ## Hosting
 
 The app is a standard FastAPI service and deploys unchanged to any container/VM host
-(Render, Railway, Fly.io, Cloud Run, EC2). Set the `ANTHROPIC_API_KEY` env var on the
+(Render, Railway, Fly.io, Cloud Run, EC2). Set the `OPENAI_API_KEY` env var on the
 host and run `uvicorn server:app --host 0.0.0.0 --port $PORT`. If a public instance is
 deployed, its URL is listed at the top of the submission notes.
 
 ## Demo video
 
-`docs/demo_video.mp4` — narrated slide walkthrough of the image → IMDB process and the
-accuracy comparison. Rebuild it with:
-
-```bash
-python docs/make_video.py
-```
-
-Narration uses **OpenAI text-to-speech** when `OPENAI_API_KEY` is set (natural voice,
-~2–3 cents for the whole script), and automatically falls back to a fully-offline
-espeak-ng voice otherwise. Override the voice/model via env vars:
-
-```bash
-TTS_VOICE=nova TTS_MODEL=gpt-4o-mini-tts python docs/make_video.py
-# voices: alloy · echo · fable · onyx · nova · shimmer
-# force the offline voice with: TTS_BACKEND=espeak
-```
+`docs/demo_video.mp4` — the submission walkthrough: a live screen recording of the
+image → IMDB process in the UI, followed by a narrated summary of the approach and the
+accuracy results. (The slide generator that produces the narrated portion is an internal
+tool and is not part of the shipped repo.)

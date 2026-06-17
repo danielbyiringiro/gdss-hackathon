@@ -5,11 +5,14 @@
 __pycache__/
 *.pyc
 
-# video build intermediates / previews
+# video build intermediates / previews (internal — only the final docs/demo_video.mp4 ships)
 docs/_build/
 docs/slides_preview/
 docs/*_preview.png
 docs/make_video.py
+docs/slides_narrated.mp4
+docs/combined.mp4
+docs/*.mov
 
 # progress sidecar from run_extraction --resume
 *.xlsx.done.json
