@@ -353,6 +353,51 @@ async def extract_product(
     })
 
 
+@app.post("/extract_bulk")
+async def extract_bulk(
+    images: list[UploadFile] = File(...),
+    backend: str = Form(None),
+):
+    """
+    Bulk mode: upload ALL images at once. Products are detected automatically
+    by the S<session> filename prefix, one row per product, written to a fresh
+    spreadsheet (downloadable at /download).
+    """
+    import grouping
+    backend = (backend or DEFAULT_BACKEND).lower()
+    if not images:
+        raise HTTPException(400, "At least one image is required.")
+    if backend == "ollama":
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as c:
+                (await c.get("http://localhost:11434/api/tags")).raise_for_status()
+        except Exception:
+            raise HTTPException(503, "Ollama not running. Start it with: ollama serve")
+
+    files = [(img.filename, await img.read()) for img in images]
+    groups = grouping.group_blobs(files)
+
+    # fresh sheet for this batch
+    with _xlsx_lock:
+        if os.path.exists(OUTPUT_XLSX):
+            os.remove(OUTPUT_XLSX)
+
+    products = []
+    for key, blobs in groups.items():
+        montage = grouping.build_montage_bytes(blobs)
+        merged = await extract_one(montage, "image/jpeg", backend)
+        row = append_to_xlsx(merged)
+        products.append({"group": key, "images": len(blobs),
+                         "row": row, "product": merged})
+
+    model = {"claude": CLAUDE_MODEL, "openai": OPENAI_MODEL}.get(backend, OLLAMA_MODEL)
+    return JSONResponse({
+        "backend": backend, "model": model,
+        "n_products": len(products), "n_images": len(files),
+        "products": products, "xlsx_path": os.path.abspath(OUTPUT_XLSX),
+    })
+
+
 @app.post("/reset")
 async def reset_xlsx():
     with _xlsx_lock:

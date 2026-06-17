@@ -102,9 +102,14 @@ export OPENAI_API_KEY="sk-..."
 python server.py            # → http://localhost:8000
 ```
 
-Open <http://localhost:8000>, pick a backend, drop all photos of **one** product
-(front / back / sides / barcode), and click **Extract attributes**. The merged row is
-shown and appended to `output_results.xlsx`, downloadable from the UI.
+Open <http://localhost:8000> and pick a backend, then either:
+
+- **Single product** — drop all photos of one product (front / back / sides / barcode);
+  they're merged into one row.
+- **Batch** — drop the **entire image set** at once. Products are detected automatically
+  by the `S<session>` filename prefix, extracted one row each, and written to a fresh
+  sheet. A results table is shown and the full **`output_results.xlsx`** downloads from the
+  UI (the ⬇ link, or after the run completes).
 
 ## 3. REST API
 
@@ -113,6 +118,11 @@ shown and appended to `output_results.xlsx`, downloadable from the UI.
 curl -X POST http://localhost:8000/extract \
   -F backend=openai \
   -F images=@front.jpg -F images=@back.jpg -F images=@barcode.jpg | python -m json.tool
+
+# batch: upload many images, auto-grouped into one row per product
+curl -X POST http://localhost:8000/extract_bulk \
+  -F backend=openai -F images=@images/*.jpg
+curl -OJ http://localhost:8000/download        # fetch the full output_results.xlsx
 ```
 
 Endpoints: `POST /extract`, `GET /download`, `POST /reset`, `GET /health`, `GET /` (UI).

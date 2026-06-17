@@ -9,6 +9,7 @@ __pycache__/
 docs/_build/
 docs/slides_preview/
 docs/*_preview.png
+docs/make_video.py
 
 # progress sidecar from run_extraction --resume
 *.xlsx.done.json

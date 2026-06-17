@@ -205,6 +205,17 @@
                             </option>
                         </select>
                     </div>
+                    <div>
+                        <label class="field" for="mode">Mode</label>
+                        <select id="mode">
+                            <option value="single">
+                                Single product (merge photos)
+                            </option>
+                            <option value="batch">
+                                Batch — auto-group all images
+                            </option>
+                        </select>
+                    </div>
                     <div style="flex: 1"></div>
                     <div style="align-self: flex-end">
                         <a class="dl" href="/download" target="_blank"
@@ -216,7 +227,7 @@
                 <div id="drop" class="drop">
                     <strong>Drop product images here</strong> or click to
                     choose<br />
-                    <span class="muted"
+                    <span class="muted" id="dropHint"
                         >Upload all photos of ONE product (front, back, sides,
                         barcode). They are merged into one row.</span
                     >
@@ -244,7 +255,7 @@
                     class="row"
                     style="justify-content: space-between; margin-bottom: 10px"
                 >
-                    <h3 style="margin: 0">Extracted product</h3>
+                    <h3 style="margin: 0" id="resultTitle">Extracted product</h3>
                     <span id="meta" class="pill ok"></span>
                 </div>
                 <table id="result"></table>
@@ -287,6 +298,17 @@
                 })
                 .catch(() => ($("#health").textContent = "server offline"));
 
+            const mode = $("#mode");
+            mode.onchange = () => {
+                const batch = mode.value === "batch";
+                $("#dropHint").textContent = batch
+                    ? "Upload ALL images at once — products are detected automatically by filename (S<session> prefix), one row each."
+                    : "Upload all photos of ONE product (front, back, sides, barcode). They are merged into one row.";
+                $("#go").textContent = batch
+                    ? "Extract all → build sheet"
+                    : "Extract attributes";
+            };
+
             drop.onclick = () => fileInput.click();
             drop.ondragover = (e) => {
                 e.preventDefault();
@@ -322,14 +344,42 @@
             }
 
             go.onclick = async () => {
+                const batch = mode.value === "batch";
                 go.disabled = true;
+                const fd = new FormData();
+                files.forEach((f) => fd.append("images", f));
+                fd.append("backend", $("#backend").value);
+                if (batch) {
+                    $("#status").innerHTML =
+                        '<span class="spinner"></span>Grouping & extracting ' +
+                        files.length +
+                        " image(s)… this can take a few minutes.";
+                    try {
+                        const r = await fetch("/extract_bulk", {
+                            method: "POST",
+                            body: fd,
+                        });
+                        if (!r.ok)
+                            throw new Error(
+                                (await r.json()).detail || r.statusText,
+                            );
+                        const d = await r.json();
+                        showBatch(d);
+                        $("#status").innerHTML =
+                            "Done — " +
+                            d.n_products +
+                            " product(s) written. " +
+                            '<a class="dl" href="/download" target="_blank">⬇ Download the full sheet</a>';
+                    } catch (e) {
+                        $("#status").textContent = "Error: " + e.message;
+                    }
+                    go.disabled = false;
+                    return;
+                }
                 $("#status").innerHTML =
                     '<span class="spinner"></span>Reading ' +
                     files.length +
                     " image(s)…";
-                const fd = new FormData();
-                files.forEach((f) => fd.append("images", f));
-                fd.append("backend", $("#backend").value);
                 try {
                     const r = await fetch("/extract", {
                         method: "POST",
@@ -351,6 +401,7 @@
 
             function showResult(d) {
                 $("#resultCard").style.display = "block";
+                $("#resultTitle").textContent = "Extracted product";
                 $("#meta").textContent =
                     d.backend +
                     " · " +
@@ -364,6 +415,38 @@
                     const v = d.product[f] || "";
                     const tr = document.createElement("tr");
                     tr.innerHTML = `<th>${f}</th><td>${v ? '<span class="val">' + esc(v) + "</span>" : '<span class="muted">—</span>'}</td>`;
+                    t.appendChild(tr);
+                });
+            }
+
+            const SUMMARY = [
+                "ITEM_NAME",
+                "BRAND",
+                "WEIGHT",
+                "PACKAGING_TYPE",
+                "TYPE",
+                "COUNTRY",
+                "BARCODE",
+            ];
+            function showBatch(d) {
+                $("#resultCard").style.display = "block";
+                $("#resultTitle").textContent =
+                    d.n_products + " products extracted";
+                $("#meta").textContent =
+                    d.backend + " · " + d.model + " · " + d.n_images + " img";
+                const t = $("#result");
+                t.innerHTML =
+                    "<tr><th style='width:auto'>#</th>" +
+                    SUMMARY.map((f) => `<th style='width:auto'>${f}</th>`).join("") +
+                    "</tr>";
+                d.products.forEach((p, i) => {
+                    const tr = document.createElement("tr");
+                    tr.innerHTML =
+                        `<td>${i + 1}</td>` +
+                        SUMMARY.map((f) => {
+                            const v = p.product[f] || "";
+                            return `<td>${v ? esc(String(v)) : '<span class="muted">—</span>'}</td>`;
+                        }).join("");
                     t.appendChild(tr);
                 });
             }

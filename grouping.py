@@ -35,14 +35,13 @@ def group_images(images_dir: str) -> dict[str, list[str]]:
     return dict(sorted(groups.items()))
 
 
-def build_montage(image_paths: list[str], cell: int = 560, cols: int = 2,
-                  max_imgs: int = 8) -> bytes:
-    """Tile a product's photos into one JPEG (bytes). Programmatic, no labels."""
-    paths = image_paths[:max_imgs]
-    rows = max(1, math.ceil(len(paths) / cols))
+def _tile(images, cell: int = 560, cols: int = 2, max_imgs: int = 8) -> bytes:
+    """Tile already-opened PIL images into one JPEG (bytes)."""
+    images = images[:max_imgs]
+    rows = max(1, math.ceil(len(images) / cols))
     canvas = Image.new("RGB", (cols * cell, rows * cell), (245, 245, 245))
-    for i, p in enumerate(paths):
-        im = Image.open(p).convert("RGB")
+    for i, im in enumerate(images):
+        im = im.convert("RGB")
         im.thumbnail((cell - 10, cell - 10))
         r, c = divmod(i, cols)
         canvas.paste(im, (c * cell + (cell - im.width) // 2,
@@ -50,6 +49,27 @@ def build_montage(image_paths: list[str], cell: int = 560, cols: int = 2,
     buf = io.BytesIO()
     canvas.save(buf, "JPEG", quality=88)
     return buf.getvalue()
+
+
+def build_montage(image_paths: list[str], **kw) -> bytes:
+    """Tile a product's photos (given file paths) into one JPEG (bytes)."""
+    return _tile([Image.open(p) for p in image_paths], **kw)
+
+
+def build_montage_bytes(blobs: list[bytes], **kw) -> bytes:
+    """Tile a product's photos (given raw bytes) into one JPEG (bytes)."""
+    return _tile([Image.open(io.BytesIO(b)) for b in blobs], **kw)
+
+
+def group_blobs(files: list[tuple]) -> dict:
+    """Group (filename, bytes) pairs by the S<session> prefix; non-matching
+    filenames each form their own group. Preserves first-seen order."""
+    groups: dict = {}
+    for name, blob in files:
+        m = PREFIX_RE.match(name or "")
+        key = m.group(1) if m else (name or "image")
+        groups.setdefault(key, []).append(blob)
+    return groups
 
 
 def resize_jpeg(path: str, max_dim: int = 1024) -> bytes:
