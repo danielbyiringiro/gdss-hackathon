@@ -166,7 +166,6 @@ report_llava.xlsx            Per-field diff vs reference (LLaVA)
 claude_vision_extractions.json   raw Claude extractions (auditable)
 images/                      product photos (169)
 docs/demo_video.mp4          submission video (live UI walkthrough + narrated summary)
-secret.txt                   OPENAI_API_KEY for reproduction (copy to .env)
 requirements.txt
 .env.example
 ```
@@ -189,5 +188,4 @@ deployed, its URL is listed at the top of the submission notes.
 
 `docs/demo_video.mp4` — the submission walkthrough: a live screen recording of the
 image → IMDB process in the UI, followed by a narrated summary of the approach and the
-accuracy results. (The slide generator that produces the narrated portion is an internal
-tool and is not part of the shipped repo.)
+accuracy results. 
